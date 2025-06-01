@@ -1,0 +1,23 @@
+{
+  "name": "church-poster-api",
+  "version": "1.0.0",
+  "description": "API for generating church posters using Ideogram and GPT-4 Vision",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "form-data": "^4.0.0",
+    "openai": "^4.104.0",
+    "sharp": "^0.34.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
