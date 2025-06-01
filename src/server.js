@@ -16,6 +16,10 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from the public directory
+app.use(express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), 'public')));
+
+
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
