@@ -114,7 +114,28 @@ async function generateFinalImage(typographyUrl, imageDescription) {
 
     // Extract the enhanced prompt and format it for image generation
     const enhancedDescription = response.choices[0].message.content;
-    const editPrompt = `Take the text from the uploaded image and place it cleanly and nicely with grain and a bit of depth of field in a beautifully shot and lit photo of ${enhancedDescription}. Tasteful and attractive noise and degrading on the image. Used as the backdrop for a poster so have appropriate negative space in the middle.`;
+    const editPrompt = `
+You are composing a 3:2 landscape poster.
+
+➡️  BACKGROUND
+• Generate a beautifully shot photo that matches this description: "${enhancedDescription}".
+• Filmic lighting, gentle depth-of-field, and a light 35 mm grain pass for subtle texture.
+• Keep the scene uncluttered so the centre remains visually calm.
+
+➡️  TYPOGRAPHY OVERLAY  – DO NOT ALTER
+• Import exactly the uploaded typography PNG/JPEG (font, weights, kerning, colours, drop-shadow) with NO substitutions or redesign.
+• Preserve its original aspect ratio and internal layout 100 %.
+• Scale uniformly so it occupies roughly the middle 40 % of the canvas height.
+• Pin it to the same relative X & Y offsets it already has inside the source image.  
+  – If the uploaded art is centred, keep it centred.  
+  – If it's offset, match that offset.
+
+➡️  COMPOSITION RULES
+• The typography layer must sit on top of the photo, fully opaque.  
+• No additional text or graphic embellishments.  
+• Ensure there is clear contrast between text and background; if needed, subtly darken or blur the backdrop under the text (but do NOT move or restyle the type).
+
+Export the final composite as a single flattened image.`;
 
     // Use the Image Edit API with proper file formatting
     const result = await openai.images.edit({
