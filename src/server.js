@@ -338,6 +338,39 @@ async function generateFinalImageResponses(typographyUrl, imageDescription) {
 
 // API Endpoints
 
+// Proxy image endpoint
+app.get('/api/proxy-image', async (req, res) => {
+  try {
+    const imageUrl = req.query.url;
+    if (!imageUrl) {
+      return res.status(400).send('No URL provided');
+    }
+
+    const response = await axios({
+      url: imageUrl,
+      method: 'GET',
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    // Forward the content-type header
+    res.set('Content-Type', response.headers['content-type']);
+    
+    // Enable CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+    // Pipe the image data to the response
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('Error proxying image:', error);
+    res.status(500).send('Error fetching image');
+  }
+});
+
 // Background suggestion endpoint
 app.post('/api/suggest-backgrounds', async (req, res) => {
   try {
