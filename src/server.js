@@ -101,7 +101,7 @@ async function generateTypography(headline, subHeadline, style) {
       stylePrompt = 'make it fun and trendy';
       break;
     case 'kids':
-      stylePrompt = 'make it for kids and children\'s church';
+      stylePrompt = 'make it for kids and childrens church - Use fun bubbly, 3D or illustrated fonts, use a white or cream color for subtitle text to ensure contrast and easy readability.';
       break;
     case 'handwritten':
       stylePrompt = 'make it handwritten';
