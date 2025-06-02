@@ -62,7 +62,7 @@ async function animateImage(imageBase64) {
     const imageToVideo = await runway.imageToVideo.create({
       model: 'gen4_turbo',
       promptImage: `data:image/png;base64,${imageBase64}`,
-      promptText: 'Subtle camera push in. Add gentle ambient motion to background elements only. Create natural atmospheric movement. Soft parallax effect. Keep all text and typography completely static and unchanged. Cinematic and smooth motion. Loop seamlessly.',
+      promptText: 'Dynamic camera drift. Flowing background elements with natural rhythm. Atmospheric layers moving independently. Deep parallax motion. Seamless loop with matching start and end frames. Cinematic depth.',
       ratio: '1280:720', // Standard HD 16:9 format
       duration: 5
     });
@@ -172,7 +172,7 @@ async function generateFinalImage(typographyUrl, imageDescription) {
       messages: [
         {
           role: "system",
-          content: "You are a professional photographer and designer. Your task is to enhance image descriptions into detailed prompts for an AI image generator. The prompt should focus on creating a beautiful, well-lit photo that works as a poster backdrop with the typography overlaid."
+          content: "You are a professional photographer and designer. Your task is to enhance image descriptions into detailed prompts for an AI image generator. The prompt should focus on creating a beautiful, well-lit photo that works as a poster backdrop with the typography overlaid. Make it filmic, with a light 35 mm grain pass for subtle texture."
         },
         {
           role: "user",
