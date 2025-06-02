@@ -22,8 +22,26 @@ const openai = new OpenAI({
 });
 
 // Generate typography with Ideogram
-async function generateTypography(headline, subHeadline) {
-  const prompt = `Create a beautifully designed modern typography for the following Church poster headline and subheadline: "${headline}: ${subHeadline}", create just the typography on a single color background, use a nice combination of fonts appropriate for modern graphic design in 2025`;
+async function generateTypography(headline, subHeadline, style) {
+  let stylePrompt = '';
+  switch(style) {
+    case 'focused':
+      stylePrompt = 'make it focused and clean';
+      break;
+    case 'trendy':
+      stylePrompt = 'make it fun and trendy';
+      break;
+    case 'kids':
+      stylePrompt = 'make it for kids and children\'s church';
+      break;
+    case 'handwritten':
+      stylePrompt = 'make it handwritten';
+      break;
+    default:
+      stylePrompt = 'make it focused and clean';
+  }
+
+  const prompt = `Create a beautifully designed modern typography for the following Church poster headline and subheadline: "${headline}: ${subHeadline}", create just the typography on a single color background, use a nice combination of fonts appropriate for modern graphic design in 2025, ${stylePrompt}`;
 
   const formData = new FormData();
   formData.append('prompt', prompt);
@@ -228,12 +246,12 @@ async function generateFinalImageResponses(typographyUrl, imageDescription) {
 // API Endpoints
 app.post('/api/generate-typography', async (req, res) => {
   try {
-    const { headline, subHeadline } = req.body;
-    if (!headline || !subHeadline) {
-      return res.status(400).json({ error: 'Missing headline or sub-headline' });
+    const { headline, subHeadline, style } = req.body;
+    if (!headline || !subHeadline || !style) {
+      return res.status(400).json({ error: 'Missing headline, sub-headline, or style' });
     }
 
-    const images = await generateTypography(headline, subHeadline);
+    const images = await generateTypography(headline, subHeadline, style);
     res.json({ images });
   } catch (error) {
     res.status(500).json({ error: error.message });
