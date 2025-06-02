@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import FormData from 'form-data';
+import RunwayML from '@runwayml/sdk';
 
 dotenv.config();
 
@@ -20,6 +21,47 @@ app.use(express.json());
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
+
+const runway = new RunwayML({
+  apiKey: process.env.RUNWAYML_API_SECRET
+});
+
+// Function to animate an image using Runway ML
+async function animateImage(imageBase64) {
+  try {
+    console.log('Starting image animation with Runway ML...');
+    
+    // Create a new image-to-video task
+    const imageToVideo = await runway.imageToVideo.create({
+      model: 'gen4_turbo',
+      promptImage: `data:image/png;base64,${imageBase64}`,
+      promptText: 'Keep the text and structure of the image the same, add subtle animation to the background elements of the image, make it a continuous seamless loop.',
+      ratio: '1280:720', // Standard HD 16:9 format
+      duration: 5
+    });
+
+    const taskId = imageToVideo.id;
+    console.log('Animation task created:', taskId);
+
+    // Poll the task until it's complete
+    let task;
+    do {
+      await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds between polls
+      task = await runway.tasks.retrieve(taskId);
+      console.log('Task status:', task.status);
+    } while (!['SUCCEEDED', 'FAILED'].includes(task.status));
+
+    if (task.status === 'FAILED') {
+      throw new Error('Animation task failed');
+    }
+
+    console.log('Animation complete');
+    return task.output[0]; // Return the video URL
+  } catch (error) {
+    console.error('Runway ML error:', error);
+    throw new Error(`Failed to animate image: ${error.message}`);
+  }
+}
 
 // Generate typography with Ideogram
 async function generateTypography(headline, subHeadline, style) {
@@ -126,9 +168,7 @@ You are composing a 3:2 landscape poster.
 • Import exactly the uploaded typography PNG/JPEG (font, weights, kerning, colours, drop-shadow) with NO substitutions or redesign.
 • Preserve its original aspect ratio and internal layout 100 %.
 • Scale uniformly so it occupies roughly the middle 40 % of the canvas height.
-• Pin it to the same relative X & Y offsets it already has inside the source image.  
-  – If the uploaded art is centred, keep it centred.  
-  – If it's offset, match that offset.
+• ALWAYS CENTER THE TYPOGRAPHY IN THE MIDDLE OF THE IMAGE.
 
 ➡️  COMPOSITION RULES
 • The typography layer must sit on top of the photo, fully opaque.  
@@ -317,6 +357,25 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Endpoint to animate an image
+app.post('/api/animate', async (req, res) => {
+  try {
+    const { imageBase64 } = req.body;
+    if (!imageBase64) {
+      return res.status(400).json({ error: 'Missing image data' });
+    }
+
+    // Remove the data:image/png;base64, prefix if present
+    const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+    
+    // Animate the image
+    const videoUrl = await animateImage(cleanBase64);
+    res.json({ videoUrl });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Server is running on port ${port}`);
 });
