@@ -337,6 +337,41 @@ async function generateFinalImageResponses(typographyUrl, imageDescription) {
 }
 
 // API Endpoints
+
+// Background suggestion endpoint
+app.post('/api/suggest-backgrounds', async (req, res) => {
+  try {
+    const { headline, subHeadline } = req.body;
+    if (!headline || !subHeadline) {
+      return res.status(400).json({ error: 'Missing headline or sub-headline' });
+    }
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4.1-nano-2025-04-14",
+      messages: [
+        {
+          role: "system",
+          content: "Generate exactly 5 background image concepts for a church poster. Return ONLY a JSON array of 5 short, descriptive strings (1-2 sentences each). Make them varied and visually compelling."
+        },
+        {
+          role: "user",
+          content: `Headline: "${headline}"\nSubheadline: "${subHeadline}"`
+        }
+      ],
+      temperature: 0.8,
+      response_format: { type: "json_object" }
+    });
+
+    const result = JSON.parse(response.choices[0].message.content);
+    const suggestions = result.suggestions || result.ideas || Object.values(result)[0];
+
+    res.json({ suggestions });
+  } catch (error) {
+    console.error('Error generating background suggestions:', error);
+    res.status(500).json({ error: 'Failed to generate suggestions' });
+  }
+});
+
 app.post('/api/generate-typography', async (req, res) => {
   try {
     const { headline, subHeadline, style } = req.body;
