@@ -184,25 +184,30 @@ async function generateFinalImage(typographyUrl, imageDescription) {
     // Extract the enhanced prompt and format it for image generation
     const enhancedDescription = response.choices[0].message.content;
     const editPrompt = `
-You are composing a 3:2 landscape poster.
+You are composing a 1536x1024 landscape poster.
 
 ➡️  BACKGROUND
 • Generate a beautifully shot photo that matches this description: "${enhancedDescription}".
 • Filmic lighting, gentle depth-of-field, and a light 35 mm grain pass for subtle texture.
-• Keep the scene uncluttered so the centre remains visually calm.
+• Keep the scene uncluttered so the center remains visually calm.
 
-➡️  TYPOGRAPHY OVERLAY  – DO NOT ALTER
-• Import exactly the uploaded typography PNG/JPEG (font, weights, kerning, colours, drop-shadow) with NO substitutions or redesign.
-• Preserve its original aspect ratio and internal layout 100 %.
-• Scale uniformly so it occupies roughly the middle 40 % of the canvas height.
-• ALWAYS CENTER THE TYPOGRAPHY IN THE MIDDLE OF THE IMAGE.
+➡️  TYPOGRAPHY OVERLAY  – CRITICAL CENTERING INSTRUCTIONS
+• Import the uploaded typography image EXACTLY as provided - preserve all fonts, colors, and styling.
+• CENTERING METHOD: 
+  - Calculate the exact center point of the 1536x1024 canvas (768px horizontal, 512px vertical)
+  - Place the typography so its visual center aligns with this canvas center point
+  - Scale the typography to approximately 40-50% of canvas height while maintaining aspect ratio
+  - The typography must be PERFECTLY CENTERED both horizontally and vertically
+• DO NOT crop or cut off any part of the typography
+• Ensure the entire typography is visible within the frame
 
 ➡️  COMPOSITION RULES
-• The typography layer must sit on top of the photo, fully opaque.  
-• No additional text or graphic embellishments.  
-• Ensure there is clear contrast between text and background; if needed, subtly darken or blur the backdrop under the text (but do NOT move or restyle the type).
+• The typography layer must sit on top of the photo, fully opaque.
+• No additional text or graphic embellishments.
+• If needed, subtly darken the background area behind the text for contrast.
+• The typography positioning is CRITICAL - it must be mathematically centered.
 
-Export the final composite as a single flattened image.`;
+Export as a single flattened 1536x1024 image with the typography perfectly centered.`;
 
     // Use the Image Edit API with proper file formatting
     const result = await openai.images.edit({
