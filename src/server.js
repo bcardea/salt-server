@@ -16,9 +16,6 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the public directory
-app.use(express.static(path.join(path.dirname(fileURLToPath(import.meta.url)), 'public')));
-
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -82,8 +79,24 @@ async function generateFinalImage(typographyUrl, imageDescription) {
     const tempFilePath = path.join(tempDir, `typography_${Date.now()}.png`);
     fs.writeFileSync(tempFilePath, typographyBuffer);
 
-    // Create a more detailed prompt that incorporates both the typography and the scene
-    const editPrompt = `Create a church poster that incorporates the typography from the provided image into the following scene: ${imageDescription}. The typography should be the focal point, integrated naturally into the composition. Maintain the original typography design while creating a cohesive poster with the described background/scene.`;
+    // Use GPT-4o to enhance the image description into a final prompt
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a professional photographer and designer. Your task is to enhance image descriptions into detailed prompts for an AI image generator. The prompt should focus on creating a beautiful, well-lit photo that works as a poster backdrop with the typography overlaid."
+        },
+        {
+          role: "user",
+          content: `Create a detailed prompt for this scene: ${imageDescription}`
+        }
+      ]
+    });
+
+    // Extract the enhanced prompt and format it for image generation
+    const enhancedDescription = response.choices[0].message.content;
+    const editPrompt = `Take the text from the uploaded image and place it cleanly and nicely with grain and a bit of depth of field in a beautifully shot and lit photo of ${enhancedDescription}. Tasteful and attractive noise and degrading on the image. Used as the backdrop for a poster so have appropriate negative space in the middle.`;
 
     // Use the Image Edit API with proper file formatting
     const result = await openai.images.edit({
