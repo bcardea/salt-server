@@ -36,7 +36,7 @@ async function animateImage(imageBase64) {
     const imageToVideo = await runway.imageToVideo.create({
       model: 'gen4_turbo',
       promptImage: `data:image/png;base64,${imageBase64}`,
-      promptText: 'Keep the text and structure of the image the same, add subtle animation to the background elements of the image, make it a continuous seamless loop.',
+      promptText: 'Subtle camera push in. Add gentle ambient motion to background elements only. Create natural atmospheric movement. Soft parallax effect. Keep all text and typography completely static and unchanged. Cinematic and smooth motion. Loop seamlessly.',
       ratio: '1280:720', // Standard HD 16:9 format
       duration: 5
     });
