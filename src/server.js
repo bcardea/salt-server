@@ -14,7 +14,33 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+// Configure CORS for production domains
+const allowedOrigins = [
+  'https://usesaltcreative.com',
+  'https://www.usesaltcreative.com',
+  'https://incredible-figolla-a49ac9.netlify.app'
+];
+
+// Development origins (only enabled if NODE_ENV is 'development')
+if (process.env.NODE_ENV === 'development') {
+  allowedOrigins.push('http://localhost:3000', 'http://localhost:8081');
+}
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  methods: ['GET', 'POST'],
+  credentials: true,
+  maxAge: 86400 // Cache preflight request for 24 hours
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
