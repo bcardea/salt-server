@@ -62,7 +62,7 @@ async function animateImage(imageBase64) {
     const imageToVideo = await runway.imageToVideo.create({
       model: 'gen4_turbo',
       promptImage: `data:image/png;base64,${imageBase64}`,
-      promptText: 'Dynamic camera drift. Flowing background elements with natural rhythm. Atmospheric layers moving independently. Deep parallax motion. Seamless loop with matching start and end frames. Cinematic depth.',
+      promptText: 'KEEP ALL TEXT AND LOGOS COMPLETELY STATIC, 0% DISTORTION.  Add lifelike and cinematic animation to the primary background elements including any sky, clouds, water. looping video starts and ends on same frame.',
       ratio: '1280:720', // Standard HD 16:9 format
       duration: 5
     });
