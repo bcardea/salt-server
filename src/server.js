@@ -45,8 +45,19 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 
+// OpenAI client for standard OpenAI API
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
+});
+
+// OpenRouter client for alternative models
+const openRouter = new OpenAI({
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY,
+  defaultHeaders: {
+    'HTTP-Referer': 'https://usesaltcreative.com',
+    'X-Title': 'Salt Creative',
+  },
 });
 
 const runway = new RunwayML({
@@ -336,9 +347,244 @@ async function generateFinalImageResponses(typographyUrl, imageDescription) {
   }
 }
 
+// Generate sermon angles using OpenRouter
+async function generateSermonAngles(topic, scripture, length, audience) {
+  try {
+    const completion = await openRouter.chat.completions.create({
+      model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+      messages: [
+        {
+          role: 'user',
+          content: `As an expert theological consultant and creative sermonic writer, generate 3-5 distinct and compelling sermon angles for a message on the topic of "${topic}" based on the scripture passage "${scripture}".
+          The target audience is ${audience}, and the desired sermon length is ${length}.
+
+          For each angle, provide:
+          1.  A catchy, thought-provoking title.
+          2.  A brief (1-2 sentence) summary of the core idea or "big idea" of the sermon.
+          3.  A hint at the primary emotional or intellectual journey for the listener.
+
+          The angles should be creative, theologically sound, and relevant to a modern audience. Format the output clearly, for example, using Markdown for titles and lists. Clean output only, no commentary, just the angles`
+        }
+      ]
+    });
+
+    return completion.choices[0].message.content;
+  } catch (error) {
+    console.error('Error generating sermon angles:', error);
+    throw error;
+  }
+}
+
+// Generate detailed sermon outline using OpenRouter
+async function generateSermonOutline(chosenAngle, scripture, audience, length) {
+  try {
+    const completion = await openRouter.chat.completions.create({
+      model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+      messages: [
+        {
+          role: 'user',
+          content: `As an expert homiletics professor, create a detailed and well-structured sermon outline based on the following information:
+          -   Main Angle/Big Idea: "${chosenAngle}"
+          -   Primary Scripture: "${scripture}"
+          -   Target Audience: ${audience}
+          -   Desired Length: ${length}
+
+          The outline should follow a clear, logical progression and include the following sections:
+          1.  Introduction:
+              -   An engaging hook (e.g., a story, a startling statistic, a relatable question).
+              -   Briefly introduce the context of the scripture passage.
+              -   Clearly state the sermon's main idea/thesis (the chosen angle).
+
+          2.  Main Body (3-4 Points):
+              -   Develop distinct, biblically-grounded points that support the main idea.
+              -   For each point, suggest supporting scriptures, illustrations, or application questions.
+              -   Ensure smooth transitions between points.
+
+          3.  Conclusion:
+              -   Summarize the main points concisely.
+              -   Provide a clear and powerful call to action or point of reflection for the audience.
+              -   End with a memorable closing statement or prayer.
+
+          The structure should be easy to follow and practical for a pastor to preach from. Use Markdown for clear formatting (e.g., headings, nested lists). Only the outline, no commentary before or after, clean output always`
+        }
+      ]
+    });
+
+    return completion.choices[0].message.content;
+  } catch (error) {
+    console.error('Error generating sermon outline:', error);
+    throw error;
+  }
+}
+
+// Generate in-depth research analysis
+async function generateResearchAnalysis(topic) {
+  try {
+    const completion = await openRouter.chat.completions.create({
+      model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+      messages: [
+        {
+          role: 'user',
+          content: `I want you to act as an elite research analyst with deep experience in synthesizing complex information into clear, concise insights.
+
+Your task is to conduct a comprehensive research breakdown on the following topic:
+
+${topic}
+
+Here's how I want you to proceed:
+
+1. Start with a brief, plain-English overview of the topic.
+2. Break the topic into 3–5 major sub-topics or components.
+3. For each sub-topic, provide:
+   - A short definition or explanation
+   - Key facts, trends, or recent developments
+   - Any major debates or differing perspectives
+4. Include notable data, statistics, or real-world examples where relevant.
+5. Recommend 3–5 high-quality resources for further reading (articles, papers, videos, or tools).
+6. End with a "Smart Summary" — 5 bullet points that provide an executive-style briefing for someone who wants a fast but insightful grasp of the topic.
+
+Guidelines:
+- Write in a clear, structured format
+- Prioritize relevance, accuracy, and clarity
+- Use formatting (headings, bullets) to make it skimmable and readable
+
+Act like you're preparing a research memo for a CEO or investor who wants to sound smart in a meeting no fluff, just value. Only deliver the response, no commentary before or after, never identify yourself or conversationally respond, just high-detailed ouput that follows my instructions exactly`
+        }
+      ]
+    });
+
+    return completion.choices[0].message.content;
+  } catch (error) {
+    console.error('Error generating research analysis:', error);
+    throw error;
+  }
+}
+
+// Get communication type instructions
+function getTypeInstructions(type) {
+  switch (type) {
+    case 'social-facebook':
+      return 'The platform is Facebook. The post should be engaging, encouraging comments and shares. It can be a few paragraphs long. Use a friendly and approachable tone. Consider adding a question to spark discussion.';
+    case 'social-twitter':
+      return 'The platform is Twitter (now X). The post must be concise and under 280 characters. Use relevant hashtags. The tone should be punchy and direct.';
+    case 'social-instagram':
+      return 'The platform is Instagram. The post should have a visually descriptive and compelling caption. Include relevant hashtags at the end. The tone should be inspiring and personal.';
+    case 'email-newsletter':
+      return 'This is a weekly newsletter email. It should have a clear structure with a welcoming introduction, a body that elaborates on the key points, and a warm closing. The tone should be informative yet personal.';
+    case 'email-thankyou':
+      return 'This is a thank-you email for church volunteers. It should be heartfelt and specific, acknowledging their contribution and impact. The tone should be sincere and appreciative.';
+    case 'email-announcement':
+      return 'This is a community announcement email. It should be clear, concise, and provide all necessary information (what, when, where, why). The tone should be professional and informative.';
+    case 'event-description':
+      return 'This is a description for a church event. It should be exciting and compelling to encourage attendance. Highlight the key activities and the purpose of the event. The tone should be enthusiastic and welcoming.';
+    default:
+      return 'This is a general communication draft.';
+  }
+}
+
+// Generate communication draft
+async function generateCommunicationDraft(type, topic, keyPoints, tone, audience) {
+  try {
+    const instructions = getTypeInstructions(type);
+    const completion = await openRouter.chat.completions.create({
+      model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+      messages: [
+        {
+          role: 'user',
+          content: `You are an expert communications assistant for a church pastor. Your task is to write a draft for a specific purpose.
+
+Communication Type: ${type}
+Topic/Event: ${topic}
+Key Points to Include: ${keyPoints}
+Desired Tone: ${tone}
+Target Audience: ${audience}
+
+Specific Instructions for this format:
+${instructions}
+
+Please write the complete draft now.`
+        }
+      ]
+    });
+
+    return completion.choices[0].message.content;
+  } catch (error) {
+    console.error('Error generating communication draft:', error);
+    throw error;
+  }
+}
+
 // API Endpoints
 
-// Proxy image endpoint
+// Depth endpoint for research analysis
+app.post('/api/depth', async (req, res) => {
+  try {
+    const { research_topic } = req.body;
+
+    if (!research_topic) {
+      return res.status(400).json({ error: 'research_topic is required' });
+    }
+
+    const analysis = await generateResearchAnalysis(research_topic);
+    res.json({ analysis });
+  } catch (error) {
+    console.error('Error in depth endpoint:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Flavor endpoint for sermon generation
+app.post('/api/flavor', async (req, res) => {
+  try {
+    const { topic, scripture, length, audience, chosenAngle } = req.body;
+
+    if (chosenAngle) {
+      // Generate detailed outline for chosen angle
+      const outline = await generateSermonOutline(chosenAngle, scripture, audience, length);
+      res.json({ outline });
+    } else {
+      // Generate initial sermon angles
+      const angles = await generateSermonAngles(topic, scripture, length, audience);
+      res.json({ angles });
+    }
+  } catch (error) {
+    console.error('Error in flavor endpoint:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Aroma endpoint for communication drafts
+app.post('/api/aroma', async (req, res) => {
+  try {
+    const { type, topic, keyPoints, tone, audience } = req.body;
+
+    // Validate required fields
+    if (!type || !topic || !keyPoints || !tone || !audience) {
+      return res.status(400).json({ 
+        error: 'Missing required fields. Please provide: type, topic, keyPoints, tone, audience' 
+      });
+    }
+
+    // Validate communication type
+    const validTypes = [
+      'social-facebook', 'social-twitter', 'social-instagram',
+      'email-newsletter', 'email-thankyou', 'email-announcement',
+      'event-description'
+    ];
+    if (!validTypes.includes(type)) {
+      return res.status(400).json({ 
+        error: 'Invalid type. Must be one of: ' + validTypes.join(', ') 
+      });
+    }
+
+    const draft = await generateCommunicationDraft(type, topic, keyPoints, tone, audience);
+    res.json({ draft });
+  } catch (error) {
+    console.error('Error in aroma endpoint:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/proxy-image', async (req, res) => {
   try {
     const imageUrl = req.query.url;
