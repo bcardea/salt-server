@@ -23,7 +23,7 @@ const allowedOrigins = [
 
 // Development origins (only enabled if NODE_ENV is 'development')
 if (process.env.NODE_ENV === 'development') {
-  allowedOrigins.push('http://localhost:3000', 'http://localhost:8081');
+  allowedOrigins.push('http://localhost:3000', 'http://localhost:8081', 'http://localhost:5173');
 }
 
 app.use(cors({
