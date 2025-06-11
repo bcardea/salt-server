@@ -365,7 +365,7 @@ Format your output clearly using Markdown.
     const completion = await openRouter.chat.completions.create({
       model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
       messages: [
-        { role: 'system', content: 'You are a helpful research assistant. Provide detailed and structured analysis.' },
+        { role: 'system', content: 'You are a helpful research assistant. Provide detailed and structured analysis. Return your answer in **Markdown**, US English only, no other alphabets.' },
         { role: 'user', content: prompt }
       ],
     });
@@ -393,7 +393,7 @@ Use Markdown for formatting if appropriate for the type (e.g., for emails or eve
     const completion = await openRouter.chat.completions.create({
       model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
       messages: [
-        { role: 'system', content: 'You are an expert communications assistant. Generate tailored content based on the provided specifications.' },
+        { role: 'system', content: 'You are an expert communications assistant. Generate tailored content based on the provided specifications. Return your answer in **Markdown**, US English only, no other alphabets.' },
         { role: 'user', content: prompt }
       ],
     });
