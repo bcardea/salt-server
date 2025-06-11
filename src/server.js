@@ -122,28 +122,41 @@ async function generateTypography(headline, subHeadline, style) {
 
 /* ─────────────────────── Sermon helpers (JSON mode) ── */
 async function generateSermonAngles(topic, scripture, length, audience) {
-  const res = await openRouter.chat.completions.create({
-    model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
-    temperature: 0.3,
-    response_format: { type: 'json_object' },
-    messages: [
-      {
-        role: 'system',
-        content: `You are an expert theological copywriter.
-Return ONLY a JSON array. Each item must include:
-  - "title":   string
-  - "summary": string
-  - "journey": string`,
-      },
-      {
-        role: 'user',
-        content: `Generate 3–5 sermon angles about "${topic}", based on "${scripture}" for ${audience}, ${length} long.`,
-      },
-    ],
-  });
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await openRouter.chat.completions.create({
+      model:           'deepseek/deepseek-r1-0528-qwen3-8b:free',
+      temperature:     0.3,
+      response_format: { type: 'json_object' },
+      messages: [
+        {
+          role: 'system',
+          content: `Return **exactly 4** sermon angles as a JSON array—no keys.
+Each angle object MUST have:
+  - "title"        (string)
+  - "coreSummary"  (string, 1-2 sentences)
+  - "journey"      (string, short phrase)`,
+        },
+        {
+          role: 'user',
+          content: `Need 4 angles for "${topic}" (${scripture}) aimed at ${audience}, ${length}.`,
+        },
+      ],
+    });
 
-  return JSON.parse(res.choices[0].message.content);
+    // parse & normalise
+    let raw       = JSON.parse(res.choices[0].message.content);
+    let anglesArr = Array.isArray(raw) ? raw : Object.values(raw);
+
+    // if model used "summary", map it to coreSummary
+    anglesArr = anglesArr.map((a) =>
+      a.coreSummary ? a : { ...a, coreSummary: a.summary ?? '' },
+    );
+
+    if (anglesArr.length >= 3) return anglesArr;   // ← return ARRAY only
+  }
+  throw new Error('Model failed to produce ≥3 angles after 3 tries');
 }
+
 
 async function generateSermonOutline(angle, scripture, audience, length) {
   const res = await openRouter.chat.completions.create({
