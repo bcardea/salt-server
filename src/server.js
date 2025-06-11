@@ -9,6 +9,7 @@ import fs      from 'fs';
 import path    from 'path';
 import FormData from 'form-data';
 import RunwayML from '@runwayml/sdk';
+import { z } from 'zod';
 
 dotenv.config();
 
@@ -40,7 +41,7 @@ app.use(
     },
     methods: ['GET', 'POST'],
     credentials: true,
-    maxAge: 86_400, // 24 h
+    maxAge: 86_400, // 24 h
   }),
 );
 
@@ -60,6 +61,17 @@ const openRouter = new OpenAI({
 });
 
 const runway = new RunwayML({ apiKey: process.env.RUNWAYML_API_SECRET });
+
+/* ──── Runtime type validation with Zod ───── */
+const Angle = z.object({
+  title: z.string(),
+  summary: z.string(),
+  journey: z.string()
+});
+
+const AnglesResponse = z.object({
+  angles: z.array(Angle).min(3).max(5)
+});
 
 /* ─────────────────────────── Utility helpers ── */
 async function downloadImageAsBuffer(url) {
@@ -121,42 +133,21 @@ async function generateTypography(headline, subHeadline, style) {
 /* Copy your three generate* functions here exactly as before */
 
 /* ─────────────────────── Sermon helpers (JSON mode) ── */
-async function generateSermonAngles(topic, scripture, length, audience) {
-  for (let attempt = 0; attempt < 3; attempt++) {
-    const res = await openRouter.chat.completions.create({
-      model:           'deepseek/deepseek-r1-0528-qwen3-8b:free',
-      temperature:     0.3,
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: `Return **exactly 4** sermon angles as a JSON array—no keys.
-Each angle object MUST have:
-  - "title"        (string)
-  - "coreSummary"  (string, 1-2 sentences)
-  - "journey"      (string, short phrase)`,
-        },
-        {
-          role: 'user',
-          content: `Need 4 angles for "${topic}" (${scripture}) aimed at ${audience}, ${length}.`,
-        },
-      ],
-    });
+async function callForAngles(prompt) {
+  const completion = await openRouter.chat.completions.create({
+    model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+    messages: [
+      {
+        role: 'system',
+        content: 'Return valid JSON only. Shape: { angles: Angle[] (3-5) }.'
+      },
+      { role: 'user', content: prompt }
+    ],
+    response_format: { type: 'json_object' } // JSON-mode!
+  });
 
-    // parse & normalise
-    let raw       = JSON.parse(res.choices[0].message.content);
-    let anglesArr = Array.isArray(raw) ? raw : Object.values(raw);
-
-    // if model used "summary", map it to coreSummary
-    anglesArr = anglesArr.map((a) =>
-      a.coreSummary ? a : { ...a, coreSummary: a.summary ?? '' },
-    );
-
-    if (anglesArr.length >= 3) return anglesArr;   // ← return ARRAY only
-  }
-  throw new Error('Model failed to produce ≥3 angles after 3 tries');
+  return JSON.parse(completion.choices[0].message.content);
 }
-
 
 async function generateSermonOutline(angle, scripture, audience, length) {
   const res = await openRouter.chat.completions.create({
@@ -171,7 +162,7 @@ Primary Scripture: "${scripture}"
 Audience: ${audience}
 Length: ${length}
 
-Follow Introduction → 3–4 points → Conclusion structure. Use Markdown only.`,
+Follow Introduction → 3–4 points → Conclusion structure. Use Markdown only.`,
       },
     ],
   });
@@ -197,12 +188,42 @@ app.post('/api/depth', async (req, res) => {
 app.post('/api/flavor', async (req, res) => {
   try {
     const { topic, scripture, length, audience, chosenAngle } = req.body;
-    if (chosenAngle) {
-      const outline = await generateSermonOutline(chosenAngle, scripture, audience, length);
-      return res.json({ outline });
+
+    // ────── A) Generate ANGLES ──────
+    if (!chosenAngle) {
+      let attempts = 0;
+      let parsed = null;
+
+      const basePrompt = `
+Topic: "${topic}"
+Scripture: "${scripture}"
+Length: ${length}, Audience: ${audience}.
+Generate exactly FIVE sermon angles (title, summary, journey) as JSON.
+`;
+
+      while (attempts < 3 && !parsed) {
+        attempts++;
+        const raw = await callForAngles(basePrompt);
+        try {
+          parsed = AnglesResponse.parse(raw);     // zod validation
+        } catch {
+          // model mis-behaved; loop again
+        }
+      }
+
+      if (!parsed) {
+        return res
+          .status(500)
+          .json({ error: 'Model failed to produce ≥3 angles after 3 tries' });
+      }
+
+      // Success!  Trim to 3-5 (already validated); send to client
+      return res.json({ angles: parsed.angles });
     }
-    const angles = await generateSermonAngles(topic, scripture, length, audience);
-    res.json({ angles });
+
+    // ────── B) Outline branch ──────
+    const outline = await generateSermonOutline(chosenAngle, scripture, audience, length);
+    return res.json({ outline });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -236,4 +257,3 @@ app.post('/api/aroma', async (req, res) => {
 
 /* ───────────────────────────── Start server ── */
 app.listen(port, () => console.log(`🌟 Salt‑server listening on ${port}`));
-
