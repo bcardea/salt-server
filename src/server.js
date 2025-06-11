@@ -316,24 +316,36 @@ async function callForAngles(prompt) {
   return JSON.parse(completion.choices[0].message.content);
 }
 
-async function generateSermonOutline(angle, scripture, audience, length) {
+async function generateSermonOutline(
+  topic,
+  scripture,
+  length,
+  audience,
+  chosenAngleTitle, // ← now a string, not an object
+) {
   const res = await openRouter.chat.completions.create({
     model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+    temperature: 0.15,
     messages: [
       {
+        role: 'system',
+        content: `You are a sermon-outline assistant. 
+Return your answer in **Markdown**, US English only, no other alphabets.`,
+      },
+      {
         role: 'user',
-        content: `As an expert homiletics professor, create a detailed sermon outline.
-
-Main Idea: "${angle}"
-Primary Scripture: "${scripture}"
-Audience: ${audience}
-Length: ${length}
-
-Follow Introduction → 3–4 points → Conclusion structure. Use Markdown only.`,
+        content: `
+Create a detailed outline on **"${chosenAngleTitle}"**  
+Topic: ${topic} — ${scripture} — ${length} — Audience: ${audience}.`,
       },
     ],
   });
-  return res.choices[0].message.content;
+
+  // Optional Cyrillic scrub
+  let outline = res.choices[0].message.content;
+  outline = outline.replace(/\p{Script=Cyrillic}/gu, '');
+
+  return outline;
 }
 
 /* ───────────────── Research + Comms helpers (unchanged) ── */
@@ -441,7 +453,8 @@ Generate exactly FIVE sermon angles (title, summary, journey) as JSON.
     }
 
     // ────── B) Outline branch ──────
-    const outline = await generateSermonOutline(chosenAngle, scripture, audience, length);
+    // `chosenAngle` is now expected to be a string (the title) from the client
+    const outline = await generateSermonOutline(topic, scripture, length, audience, chosenAngle);
     return res.json({ outline });
   } catch (err) {
     console.error(err);
