@@ -348,25 +348,34 @@ async function generateFinalImageResponses(typographyUrl, imageDescription) {
 }
 
 // Generate sermon angles using OpenRouter
-async function generateSermonAngles(topic, scripture, length, audience) {
-  try {
-    const completion = await openRouter.chat.completions.create({
-      model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
-      messages: [
-        {
-          role: 'user',
-          content: `As an expert theological consultant and creative sermonic writer, generate 3-5 distinct and compelling sermon angles for a message on the topic of "${topic}" based on the scripture passage "${scripture}".
-          The target audience is ${audience}, and the desired sermon length is ${length}.
+async function generateSermonAngles(topic: string, scripture: string,
+                                    length: string, audience: string) {
 
-          For each angle, provide:
-          1.  A catchy, thought-provoking title.
-          2.  A brief (1-2 sentence) summary of the core idea or "big idea" of the sermon.
-          3.  A hint at the primary emotional or intellectual journey for the listener.
+  const completion = await openRouter.chat.completions.create({
+    model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+    temperature: 0.3,
+    response_format: { type: 'json_object' },   // 🆕 tell the router “JSON only”
+    messages: [
+      {
+        role: 'system',
+        content: `You are an expert theological copywriter.
+Return ONLY a JSON array. Each item must have:
+  - "title": string
+  - "summary": string
+  - "journey": string`
+      },
+      {
+        role: 'user',
+        content: `
+Generate 3–5 sermon angles about "${topic}",
+based on "${scripture}" for ${audience}, ${length} long.`
+      }
+    ]
+  });
 
-          The angles should be creative, theologically sound, and relevant to a modern audience. Format the output clearly, for example, using Markdown for titles and lists. Clean output only, no commentary, just the angles`
-        }
-      ]
-    });
+  // Because JSON mode is enforced, this parse is safe.
+  return JSON.parse(completion.choices[0].message.content);
+}
 
     return completion.choices[0].message.content;
   } catch (error) {
@@ -539,17 +548,17 @@ app.post('/api/flavor', async (req, res) => {
     const { topic, scripture, length, audience, chosenAngle } = req.body;
 
     if (chosenAngle) {
-      // Generate detailed outline for chosen angle
       const outline = await generateSermonOutline(chosenAngle, scripture, audience, length);
-      res.json({ outline });
-    } else {
-      // Generate initial sermon angles
-      const angles = await generateSermonAngles(topic, scripture, length, audience);
-      res.json({ angles });
+      // You can JSON‑ify `generateSermonOutline` the same way if desired.
+      return res.json({ outline });
     }
-  } catch (error) {
-    console.error('Error in flavor endpoint:', error);
-    res.status(500).json({ error: error.message });
+
+    const angles = await generateSermonAngles(topic, scripture, length, audience);
+    // angles is already an array → no extra splitting needed
+    return res.json({ angles });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 });
 
