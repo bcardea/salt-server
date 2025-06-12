@@ -388,18 +388,15 @@ async function generateImageFromPrompt(prompt) {
   try {
     const replicate = new Replicate();
     const input = { prompt, aspect_ratio: '16:9' };
-    const output = await replicate.run('google/imagen-4-ultra', { input });
-    // Extract the URL from the Replicate response
-    if (typeof output === 'string') {
-      return output; // Direct URL string
-    } else if (Array.isArray(output)) {
-      return output[0]; // First URL if array
-    } else if (output && output.output) {
-      return output.output; // URL from output field
-    } else {
-      console.error('Unexpected Replicate response format:', output);
-      throw new Error('Invalid image generation response format');
+    const response = await replicate.run('google/imagen-4-ultra', { input });
+    
+    // Check if we have a valid response with output URL
+    if (response && typeof response === 'object' && response.output && typeof response.output === 'string') {
+      return response.output;
     }
+    
+    console.error('Unexpected Replicate response format:', response);
+    throw new Error('Invalid image generation response format');
   } catch (error) {
     console.error('Error generating image with Replicate:', error);
     throw new Error('Image generation failed');
