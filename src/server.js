@@ -386,28 +386,58 @@ These examples demonstrate the desired output format and level of detail. Use th
 
 async function generateImageFromPrompt(prompt) {
   try {
-    console.log('Initializing Replicate client...');
-    const replicate = new Replicate();
+    console.log('Starting image generation with Replicate...');
     
-    const input = { prompt, aspect_ratio: '16:9' };
-    console.log('Sending request to Replicate with input:', input);
+    // Create prediction with exact input format from API docs
+    const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        // Use the model name directly as specified in docs
+        version: '2a4e5f12dea9e4e30b5b72c3575c8143f8c8eda9e88a6c47c49cdb5e7b2ff90',
+        input: {
+          prompt,
+          aspect_ratio: '16:9',
+          output_format: 'jpg',
+          safety_filter_level: 'block_only_high'
+        }
+      })
+    });
     
-    const response = await replicate.run('google/imagen-4-ultra', { input });
-    console.log('Raw Replicate response:', JSON.stringify(response, null, 2));
+    const prediction = await createResponse.json();
+    console.log('Initial prediction:', JSON.stringify(prediction, null, 2));
     
-    // Check if we have a valid response with output URL
-    if (response && typeof response === 'object') {
-      console.log('Response type:', typeof response);
-      console.log('Response keys:', Object.keys(response));
-      
-      if (response.output && typeof response.output === 'string') {
-        console.log('Found valid output URL');
-        return response.output;
-      }
+    if (prediction.error) {
+      throw new Error(`Prediction creation failed: ${prediction.error}`);
     }
     
-    console.error('Unexpected Replicate response format:', JSON.stringify(response, null, 2));
-    throw new Error('Invalid image generation response format');
+    // Poll for completion
+    let result = prediction;
+    while (result.status === 'starting' || result.status === 'processing') {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      
+      const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
+        headers: {
+          'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
+        }
+      });
+      
+      result = await pollResponse.json();
+      console.log('Poll result status:', result.status);
+    }
+    
+    console.log('Final prediction result:', JSON.stringify(result, null, 2));
+    
+    // The output should be a direct URL string according to the API docs
+    if (result.status === 'succeeded' && typeof result.output === 'string') {
+      console.log('Successfully generated image URL:', result.output);
+      return result.output;
+    }
+    
+    throw new Error(`Image generation failed with status: ${result.status}`);
   } catch (error) {
     console.error('Error generating image with Replicate:', error);
     console.error('Full error stack:', error.stack);
