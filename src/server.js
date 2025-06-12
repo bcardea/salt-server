@@ -396,8 +396,8 @@ async function generateImageFromPrompt(prompt) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        // Use the model name directly as specified in docs
-        version: '2a4e5f12dea9e4e30b5b72c3575c8143f8c8eda9e88a6c47c49cdb5e7b2ff90',
+        // Use the model name
+        version: 'google/imagen-4-ultra',
         input: {
           prompt,
           aspect_ratio: '16:9',
