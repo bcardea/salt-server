@@ -325,7 +325,7 @@ async function generateSermonOutline(
 ) {
   const res = await openRouter.chat.completions.create({
     model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
-    temperature: 0.15,
+    temperature: 0.6,
     messages: [
       {
         role: 'system',
@@ -352,7 +352,7 @@ Topic: ${topic} — ${scripture} — ${length} — Audience: ${audience}.`,
 async function generateResearchAnalysis(topic) {
   try {
     const prompt = `
-Provide a comprehensive research analysis on the topic: "${topic}".
+You are a doctorate level research analysist who works specifically for pastors and churches, Provide a comprehensive research analysis on the topic: "${topic}".
 Structure your response with the following sections:
 1.  **Overview**: A brief introduction to the topic.
 2.  **Key Sub-topics/Themes**: Identify and elaborate on 3-5 major sub-topics or themes related to the main topic.
