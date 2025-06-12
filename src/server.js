@@ -9,6 +9,7 @@ import fs      from 'fs';
 import path    from 'path';
 import FormData from 'form-data';
 import RunwayML from '@runwayml/sdk';
+import Replicate from 'replicate';
 import { z } from 'zod';
 
 dotenv.config();
@@ -348,6 +349,53 @@ Topic: ${topic} — ${scripture} — ${length} — Audience: ${audience}.`,
   return outline;
 }
 
+/* ───────────────── Image Generation helpers ── */
+async function generateImagePromptFromOutline(outline) {
+  const systemPrompt = `You are an expert prompt engineer specializing in generating highly detailed and specific image prompts for sermons. Your goal is to create visually compelling and emotionally resonant prompts that capture the essence of the sermon's message, featuring diverse characters and modern settings. Follow these steps for each sermon provided:
+
+Analyze the Sermon: Carefully review the sermon outline or content to identify the core theme, target audience, key emotions, and any specific scenes or characters that could be visualized.
+
+Conceptualize the Image: Develop a clear mental image that encapsulates the sermon's message. Consider the setting, characters (age, ethnicity, clothing, expressions), and overall mood (e.g., hopeful, reflective, empowered).
+
+Craft the Prompt: Write a single-sentence, highly detailed image prompt following this template:
+
+"Create a [cinematic/photorealistic/painterly] [shot type - e.g., medium shot, close-up, panoramic] [descriptive details of setting - e.g., sun-drenched urban park, dimly lit coffee shop, modern living room] featuring [describe the focal point character(s) - e.g., a young Black woman with radiant, hopeful eyes, a diverse group of young adults in prayer]. [Describe their actions/expressions]. [Describe their clothing/appearance]. [Describe environmental details - e.g., dappled sunlight, scattered Bibles, exposed brick]. [If applicable, describe text overlay - e.g., Above, superimpose in large, clean, white Helvetica font the title: 'SERMON TITLE']. The [lighting style - e.g., soft, golden hour sunlight, Edison bulb lighting] creates a [mood - e.g., hopeful, intimate, reflective] atmosphere. The color palette should be [describe dominant colors - e.g., warm, golden tones, muted blues and grays]. The overall feel is one of [overall impression - e.g., serene strength, authentic community, quiet contemplation]."
+
+Maintain Consistency: Always output only the single-sentence image prompt string. Do not include phrases like "The photo:" or any introductory or concluding remarks. Do not output multiple sentences.
+
+Prompt Refinement: Based on initial results, iterate on the prompt as needed to achieve the desired visual representation of the sermon. Request adjustments by providing the existing prompt and asking for specific changes.
+
+Examples of correctly formatted prompts:
+
+"Create a photorealistic medium shot capturing the warm atmosphere of a modern, minimalist apartment. The focus is on a young Latina woman with long, wavy hair pulled back in a messy bun, wearing an oversized knit sweater and leggings, sitting cross-legged on a plush rug. She is journaling with a focused, contemplative expression, illuminated by soft sunlight filtering through sheer curtains. A steaming mug of tea sits beside her. Above, superimpose in large, clean, white Helvetica font the title: 'FINDING STILLNESS'. The lighting creates a serene and comforting atmosphere. The color palette is primarily neutral tones with pops of warm colors. The overall feel conveys a sense of peace and self-reflection."
+
+"Create a cinematic medium shot of a bustling downtown street at twilight, focusing on a young Black man with a neatly trimmed beard and stylish glasses. He's wearing a denim jacket and a graphic t-shirt with headphones around his neck, looking upwards with a hopeful gaze. The street is alive with blurred lights and pedestrian traffic. Above, slightly offset and transparent, superimpose in large, clean, white Helvetica font the title: 'HOPE AMIDST CHAOS'. The lighting is a mix of artificial streetlights and the fading natural light, creating a dynamic and urban atmosphere. The color palette includes deep blues, oranges, and yellows. The overall feel is one of resilience and optimism."
+
+These examples demonstrate the desired output format and level of detail. Use them as a guideline for crafting your own prompts. Make sure you ONLY output the prompt string itself.`;
+
+  const completion = await openRouter.chat.completions.create({
+    model: 'google/gemini-2.5-flash-preview-05-20',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: outline }
+    ]
+  });
+
+  return completion.choices[0].message.content.trim().replace(/\n/g, ' ');
+}
+
+async function generateImageFromPrompt(prompt) {
+  try {
+    const replicate = new Replicate();
+    const input = { prompt, aspect_ratio: '16:9' };
+    const output = await replicate.run('google/imagen-4-ultra', { input });
+    return Array.isArray(output) ? output[0] : output;
+  } catch (error) {
+    console.error('Error generating image with Replicate:', error);
+    throw new Error('Image generation failed');
+  }
+}
+
 /* ───────────────── Research + Comms helpers (unchanged) ── */
 async function generateResearchAnalysis(topic) {
   try {
@@ -455,7 +503,16 @@ Generate exactly FIVE sermon angles (title, summary, journey) as JSON.
     // ────── B) Outline branch ──────
     // `chosenAngle` is now expected to be a string (the title) from the client
     const outline = await generateSermonOutline(topic, scripture, length, audience, chosenAngle);
-    return res.json({ outline });
+
+    let imageUrl = null;
+    try {
+      const imagePrompt = await generateImagePromptFromOutline(outline);
+      imageUrl = await generateImageFromPrompt(imagePrompt);
+    } catch (imgErr) {
+      console.error('Image generation error:', imgErr);
+    }
+
+    return res.json({ outline, imageUrl });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
