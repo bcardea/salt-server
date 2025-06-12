@@ -386,20 +386,32 @@ These examples demonstrate the desired output format and level of detail. Use th
 
 async function generateImageFromPrompt(prompt) {
   try {
+    console.log('Initializing Replicate client...');
     const replicate = new Replicate();
+    
     const input = { prompt, aspect_ratio: '16:9' };
+    console.log('Sending request to Replicate with input:', input);
+    
     const response = await replicate.run('google/imagen-4-ultra', { input });
+    console.log('Raw Replicate response:', JSON.stringify(response, null, 2));
     
     // Check if we have a valid response with output URL
-    if (response && typeof response === 'object' && response.output && typeof response.output === 'string') {
-      return response.output;
+    if (response && typeof response === 'object') {
+      console.log('Response type:', typeof response);
+      console.log('Response keys:', Object.keys(response));
+      
+      if (response.output && typeof response.output === 'string') {
+        console.log('Found valid output URL');
+        return response.output;
+      }
     }
     
-    console.error('Unexpected Replicate response format:', response);
+    console.error('Unexpected Replicate response format:', JSON.stringify(response, null, 2));
     throw new Error('Invalid image generation response format');
   } catch (error) {
     console.error('Error generating image with Replicate:', error);
-    throw new Error('Image generation failed');
+    console.error('Full error stack:', error.stack);
+    throw new Error(`Image generation failed: ${error.message}`);
   }
 }
 
@@ -513,12 +525,18 @@ Generate exactly FIVE sermon angles (title, summary, journey) as JSON.
 
     let imageUrl = null;
     try {
+      console.log('Starting image generation process...');
       const imagePrompt = await generateImagePromptFromOutline(outline);
+      console.log('Generated image prompt:', imagePrompt);
+      
       imageUrl = await generateImageFromPrompt(imagePrompt);
+      console.log('Received image URL:', imageUrl);
     } catch (imgErr) {
       console.error('Image generation error:', imgErr);
+      console.error('Full error details:', JSON.stringify(imgErr, null, 2));
     }
 
+    console.log('Final response payload:', { outline: outline.slice(0, 100) + '...', imageUrl });
     return res.json({ outline, imageUrl });
   } catch (err) {
     console.error(err);
