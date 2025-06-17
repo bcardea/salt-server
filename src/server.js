@@ -596,39 +596,6 @@ app.post('/api/aroma', async (req, res) => {
   }
 });
 
-/* The rest of your endpoints: proxy-image, suggest-backgrounds, generate-typography,
-   generate-final, animate, health – copy them here unchanged.
-   None of them contained TypeScript syntax, so they will run as‑is. */
-
-// Proxy image endpoint
-app.get('/api/proxy-image', async (req, res) => {
-  try {
-    const imageUrl = req.query.url;
-    if (!imageUrl) {
-      return res.status(400).send('No URL provided');
-    }
-
-    const response = await axios({
-      url: imageUrl,
-      method: 'GET',
-      responseType: 'stream',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    });
-
-    res.set('Content-Type', response.headers['content-type']);
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Content-Type');
-    response.data.pipe(res);
-  } catch (error) {
-    console.error('Error proxying image:', error);
-    res.status(500).send('Error fetching image');
-  }
-});
-
-// Background suggestion endpoint
 app.post('/api/suggest-backgrounds', async (req, res) => {
   try {
     const { headline, subHeadline } = req.body;
@@ -641,7 +608,7 @@ app.post('/api/suggest-backgrounds', async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "Generate exactly 5 background image concepts for a church poster. Return ONLY a JSON array of 5 short, descriptive strings (1-2 sentences each). Make them varied and visually compelling."
+          content: "You are an AI assistant specializing in creating visual concepts for church communications. Given a headline and a subheadline, generate exactly 5 distinct background image concepts for a church poster. Each concept should be a short, descriptive string (1-2 sentences). Crucially, the concepts MUST directly and specifically relate to the themes, stories, or figures mentioned in BOTH the headline and subheadline. Ensure the suggestions are varied and visually compelling. Return a JSON object with a single key 'suggestions' which contains an array of these 5 strings."
         },
         {
           role: "user",
