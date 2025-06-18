@@ -636,7 +636,8 @@ app.get('/api/proxy-image', async (req, res) => {
   }
 });
 
-// Background suggestion endpointapp.post('/api/suggest-backgrounds', async (req, res) => {
+// Background suggestion endpoint
+app.post('/api/suggest-backgrounds', async (req, res) => {
   try {
     const { headline, subHeadline } = req.body;
     if (!headline || !subHeadline) {
