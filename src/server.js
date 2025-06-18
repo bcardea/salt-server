@@ -302,6 +302,12 @@ async function generateFinalImageResponses(typographyUrl, imageDescription) {
 }
 
 /* ─────────────────────── Sermon helpers (JSON mode) ── */
+function cleanJsonString(str) {
+  // It's common for models to wrap JSON in ```json ... ```, so we strip it.
+  const match = str.match(/```json\n([\s\S]*?)\n```/);
+  return match ? match[1] : str;
+}
+
 async function callForAngles(prompt) {
   const completion = await openRouter.chat.completions.create({
     model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
@@ -315,7 +321,9 @@ async function callForAngles(prompt) {
     response_format: { type: 'json_object' } // JSON-mode!
   });
 
-  return JSON.parse(completion.choices[0].message.content);
+  const content = completion.choices[0].message.content;
+  const cleanedContent = cleanJsonString(content);
+  return JSON.parse(cleanedContent);
 }
 
 async function generateSermonOutline(
@@ -596,7 +604,39 @@ app.post('/api/aroma', async (req, res) => {
   }
 });
 
-app.post('/api/suggest-backgrounds', async (req, res) => {
+/* The rest of your endpoints: proxy-image, suggest-backgrounds, generate-typography,
+   generate-final, animate, health – copy them here unchanged.
+   None of them contained TypeScript syntax, so they will run as‑is. */
+
+// Proxy image endpoint
+app.get('/api/proxy-image', async (req, res) => {
+  try {
+    const imageUrl = req.query.url;
+    if (!imageUrl) {
+      return res.status(400).send('No URL provided');
+    }
+
+    const response = await axios({
+      url: imageUrl,
+      method: 'GET',
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    res.set('Content-Type', response.headers['content-type']);
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('Error proxying image:', error);
+    res.status(500).send('Error fetching image');
+  }
+});
+
+// Background suggestion endpointapp.post('/api/suggest-backgrounds', async (req, res) => {
   try {
     const { headline, subHeadline } = req.body;
     if (!headline || !subHeadline) {
