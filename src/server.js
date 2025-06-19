@@ -511,6 +511,37 @@ Use Markdown for formatting if appropriate for the type (e.g., for emails or eve
 }
 
 /* ───────────────────────────── Routes ── */
+
+app.post('/api/photographer', async (req, res) => {
+  try {
+    const { photo_input } = req.body;
+
+    if (!photo_input) {
+      return res.status(400).json({ error: 'Missing photo_input' });
+    }
+
+    const replicate = new Replicate({
+      auth: process.env.REPLICATE_API_TOKEN,
+    });
+
+    const prompt =
+      `The photo: Create a cinematic, photorealistic medium shot capturing ${photo_input} rendered with a shallow depth of field. Natural film grain, a warm, slightly muted color palette, authentic feel, filmic texture`;
+
+    const output = await replicate.run(
+      'google/imagen-4-ultra:00b46953965d1464325b8935515c1743d34a05342dd0a75439d15511f84153e1',
+      {
+        input: {
+          prompt,
+        },
+      },
+    );
+
+    res.json({ imageUrl: output[0] });
+  } catch (error) {
+    console.error('Error in /api/photographer:', error);
+    res.status(500).json({ error: 'Failed to generate image' });
+  }
+});
 app.post('/api/depth', async (req, res) => {
   try {
     const { research_topic } = req.body;
