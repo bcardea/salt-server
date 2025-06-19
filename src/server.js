@@ -530,7 +530,7 @@ app.post('/api/photographer', async (req, res) => {
     const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
-        'Authorization': `Token ${process.env.REPLICATE_API_KEY}`,
+        'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -560,7 +560,7 @@ app.post('/api/photographer', async (req, res) => {
       
       const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
         headers: {
-          'Authorization': `Token ${process.env.REPLICATE_API_KEY}`,
+          'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
         },
       });
       
