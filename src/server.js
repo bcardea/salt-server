@@ -427,7 +427,7 @@ async function generateImageFromPrompt(prompt) {
     // Poll for completion
     let result = prediction;
     while (result.status === 'starting' || result.status === 'processing') {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      await new Promise((r) => setTimeout(r, 1000)); // Wait 1 second
       
       const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
         headers: {
@@ -521,26 +521,81 @@ app.post('/api/photographer', async (req, res) => {
       return res.status(400).json({ error: 'Missing photo_input' });
     }
 
-    const replicate = new Replicate({
-      auth: process.env.REPLICATE_API_TOKEN,
-    });
-
     const prompt =
       `The photo: Create a cinematic, photorealistic medium shot capturing ${photo_input} rendered with a shallow depth of field. Natural film grain, a warm, slightly muted color palette, authentic feel, filmic texture`;
 
-    const output = await replicate.run(
-      'google/imagen-4-ultra:00b46953965d1464325b8935515c1743d34a05342dd0a75439d15511f84153e1',
-      {
+    console.log('Starting photographer image generation with Replicate...');
+    
+    // Create prediction
+    const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${process.env.REPLICATE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        version: 'google/imagen-4-ultra:00b46953965d1464325b8935515c1743d34a05342dd0a75439d15511f84153e1',
         input: {
           prompt,
         },
-      },
-    );
+      }),
+    });
 
-    res.json({ imageUrl: output[0] });
+    let prediction = await createResponse.json();
+    console.log('Photographer initial prediction:', JSON.stringify(prediction, null, 2));
+
+    if (!createResponse.ok || prediction.error) {
+      const errorDetail = prediction.error ? JSON.stringify(prediction.error) : `HTTP status ${createResponse.status}`;
+      console.error(`Photographer prediction creation failed: ${errorDetail}`);
+      return res.status(500).json({ error: `Prediction creation failed: ${errorDetail}` });
+    }
+    
+    // Poll for completion
+    let result = prediction;
+    const maxPolls = 60; // Poll for a maximum of 60 seconds (adjust as needed)
+    let pollCount = 0;
+
+    while ((result.status === 'starting' || result.status === 'processing') && pollCount < maxPolls) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      
+      const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
+        headers: {
+          'Authorization': `Token ${process.env.REPLICATE_API_KEY}`,
+        },
+      });
+      
+      if (!pollResponse.ok) {
+        console.error(`Photographer polling failed: HTTP status ${pollResponse.status}`);
+        // Potentially handle this more gracefully, e.g. retry a few times or return error
+        return res.status(500).json({ error: `Polling failed: HTTP status ${pollResponse.status}` });
+      }
+
+      result = await pollResponse.json();
+      console.log('Photographer poll result status:', result.status);
+      pollCount++;
+    }
+    
+    console.log('Photographer final prediction result:', JSON.stringify(result, null, 2));
+    
+    if (result.status === 'succeeded' && result.output && result.output.length > 0) {
+      // Assuming output is an array of URLs for imagen-4-ultra, take the first one.
+      // If it's a direct string, this will also work: result.output[0] for a string 'http...' is 'h'.
+      // It's safer to check if result.output is an array.
+      const imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
+      if (typeof imageUrl === 'string'){
+        console.log('Successfully generated photographer image URL:', imageUrl);
+        return res.json({ imageUrl });
+      }
+    }
+    
+    const failureReason = result.error ? JSON.stringify(result.error) : `Status: ${result.status}`;
+    console.error(`Photographer image generation failed: ${failureReason}`);
+    res.status(500).json({ error: `Image generation failed: ${failureReason}` });
+
   } catch (error) {
-    console.error('Error in /api/photographer:', error);
-    res.status(500).json({ error: 'Failed to generate image' });
+    console.error('Error in /api/photographer:', error.message);
+    console.error('Full error stack:', error.stack);
+    res.status(500).json({ error: `Failed to generate image: ${error.message}` });
   }
 });
 app.post('/api/depth', async (req, res) => {
