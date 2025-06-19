@@ -534,7 +534,7 @@ app.post('/api/photographer', async (req, res) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        version: 'google/imagen-4-ultra:00b46953965d1464325b8935515c1743d34a05342dd0a75439d15511f84153e1',
+        version: 'google/imagen-4-ultra', // Removed specific version hash
         input: {
           prompt,
         },
