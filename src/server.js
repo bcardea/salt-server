@@ -24,6 +24,7 @@ const allowedOrigins = [
   'https://www.usesaltcreative.com',
   'https://incredible-figolla-a49ac9.netlify.app',
   'https://6851d32411955d00085ca882--incredible-figolla-a49ac9.netlify.app',
+  'https://68543694f18983000877a9d6--incredible-figolla-a49ac9.netlify.app',
 ];
 
 // extra origins when developing locally
