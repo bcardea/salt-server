@@ -368,7 +368,7 @@ Conceptualize the Image: Develop a clear mental image that encapsulates the serm
 
 Craft the Prompt: Write a single-sentence, highly detailed image prompt following this template:
 
-"Create a [cinematic/photorealistic/painterly] [shot type - e.g., medium shot, close-up, panoramic] [descriptive details of setting - e.g., sun-drenched urban park, dimly lit coffee shop, modern living room] featuring [describe the focal point character(s) - e.g., a young Black woman with radiant, hopeful eyes, a diverse group of young adults in prayer]. [Describe their actions/expressions]. [Describe their clothing/appearance]. [Describe environmental details - e.g., dappled sunlight, scattered Bibles, exposed brick]. [If applicable, describe text overlay - e.g., Above, superimpose in large, clean, white Helvetica font the title: 'SERMON TITLE']. The [lighting style - e.g., soft, golden hour sunlight, Edison bulb lighting] creates a [mood - e.g., hopeful, intimate, reflective] atmosphere. The color palette should be [describe dominant colors - e.g., warm, golden tones, muted blues and grays]. The overall feel is one of [overall impression - e.g., serene strength, authentic community, quiet contemplation]."
+"Create a [cinematic/photorealistic/painterly] [shot type - e.g., medium shot, close-up, panoramic] [descriptive details of setting - e.g., sun-drenched urban park, dimly lit coffee shop, modern living room] featuring [describe the focal point character(s) - e.g., a young Black woman with radiant, hopeful eyes, a diverse group of young adults in prayer]. [Describe their actions/expressions]. [Describe their clothing/appearance]. [Describe environmental details - e.g., dappled sunlight, scattered Bibles, exposed brick]. [If applicable, describe text overlay - e.g.,. The [lighting style - e.g., soft, golden hour sunlight, Edison bulb lighting] creates a [mood - e.g., hopeful, intimate, reflective] atmosphere. The color palette should be [describe dominant colors - e.g., warm, golden tones, muted blues and grays]. The overall feel is one of [overall impression - e.g., serene strength, authentic community, quiet contemplation]."
 
 Maintain Consistency: Always output only the single-sentence image prompt string. Do not include phrases like "The photo:" or any introductory or concluding remarks. Do not output multiple sentences.
 
@@ -376,9 +376,9 @@ Prompt Refinement: Based on initial results, iterate on the prompt as needed to 
 
 Examples of correctly formatted prompts:
 
-"Create a photorealistic medium shot capturing the warm atmosphere of a modern, minimalist apartment. The focus is on a young Latina woman with long, wavy hair pulled back in a messy bun, wearing an oversized knit sweater and leggings, sitting cross-legged on a plush rug. She is journaling with a focused, contemplative expression, illuminated by soft sunlight filtering through sheer curtains. A steaming mug of tea sits beside her. Above, superimpose in large, clean, white Helvetica font the title: 'FINDING STILLNESS'. The lighting creates a serene and comforting atmosphere. The color palette is primarily neutral tones with pops of warm colors. The overall feel conveys a sense of peace and self-reflection."
+"Create a photorealistic medium shot capturing the warm atmosphere of a modern, minimalist apartment. The focus is on a young Latina woman with long, wavy hair pulled back in a messy bun, wearing an oversized knit sweater and leggings, sitting cross-legged on a plush rug. She is journaling with a focused, contemplative expression, illuminated by soft sunlight filtering through sheer curtains. A steaming mug of tea sits beside her. The lighting creates a serene and comforting atmosphere. The color palette is primarily neutral tones with pops of warm colors. The overall feel conveys a sense of peace and self-reflection."
 
-"Create a cinematic medium shot of a bustling downtown street at twilight, focusing on a young Black man with a neatly trimmed beard and stylish glasses. He's wearing a denim jacket and a graphic t-shirt with headphones around his neck, looking upwards with a hopeful gaze. The street is alive with blurred lights and pedestrian traffic. Above, slightly offset and transparent, superimpose in large, clean, white Helvetica font the title: 'HOPE AMIDST CHAOS'. The lighting is a mix of artificial streetlights and the fading natural light, creating a dynamic and urban atmosphere. The color palette includes deep blues, oranges, and yellows. The overall feel is one of resilience and optimism."
+"Create a cinematic medium shot of a bustling downtown street at twilight, focusing on a young Black man with a neatly trimmed beard and stylish glasses. He's wearing a denim jacket and a graphic t-shirt with headphones around his neck, looking upwards with a hopeful gaze. The street is alive with blurred lights and pedestrian traffic. The lighting is a mix of artificial streetlights and the fading natural light, creating a dynamic and urban atmosphere. The color palette includes deep blues, oranges, and yellows. The overall feel is one of resilience and optimism."
 
 These examples demonstrate the desired output format and level of detail. Use them as a guideline for crafting your own prompts. Make sure you ONLY output the prompt string itself.`;
 
@@ -406,7 +406,7 @@ async function generateImageFromPrompt(prompt) {
       },
       body: JSON.stringify({
         // Use the model name
-        version: 'google/imagen-4-ultra',
+        version: 'google/imagen-4-fast',
         input: {
           prompt,
           aspect_ratio: '16:9',
