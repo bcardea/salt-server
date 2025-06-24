@@ -88,34 +88,42 @@ async function downloadImageAsBuffer(url) {
 /* ──────────────────────────── Replicate: animate image ── */
 async function animateImage(imageBase64) {
   try {
-    // Create a prediction and wait for it to complete
+    // 1. Create the prediction
     const prediction = await replicate.predictions.create({
       model: 'bytedance/seedance-1-pro',
       input: {
-        image:        `data:image/png;base64,${imageBase64}`,
-        prompt:       'Animate the background in a realistic way, keeping the text exactly the same.',
-        resolution:   '1080p',
-        duration:     5,
+        image: `data:image/png;base64,${imageBase64}`,
+        prompt: 'Animate the background in a realistic way, keeping the text exactly the same.',
+        resolution: '1080p',
+        duration: 5,
         camera_fixed: true,
       },
     });
 
-    // The `wait` method polls for the prediction to finish
-    const completedPrediction = await replicate.wait(prediction);
+    console.log(`Replicate prediction created: ${prediction.id}. Status page: ${prediction.urls.get}`);
 
-    // Check if the prediction was successful
+    // 2. Wait for the prediction with a timeout
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Replicate prediction timed out after 4 minutes.')), 240000) // 4 minutes
+    );
+
+    const completedPrediction = await Promise.race([
+      replicate.wait(prediction),
+      timeoutPromise
+    ]);
+
+    // 3. Handle the result
     if (completedPrediction.status === 'succeeded') {
+      console.log('Replicate prediction succeeded. Output:', completedPrediction.output);
       return completedPrediction.output;
     }
 
-    // Handle failed or canceled predictions
     if (completedPrediction.status === 'failed' || completedPrediction.status === 'canceled') {
       console.error('Replicate prediction failed:', completedPrediction.error);
       throw new Error(`Replicate prediction failed: ${completedPrediction.error}`);
     }
 
-    // Fallback for unexpected status
-    throw new Error(`Replicate prediction ended with status: ${completedPrediction.status}`);
+    throw new Error(`Replicate prediction ended with unexpected status: ${completedPrediction.status}`);
   } catch (error) {
     console.error('Replicate API error in animateImage:', error);
     throw new Error(`Replicate API Error: ${error.message}`);
