@@ -8,7 +8,7 @@ import axios   from 'axios';
 import fs      from 'fs';
 import path    from 'path';
 import FormData from 'form-data';
-import RunwayML from '@runwayml/sdk';
+
 import Replicate from 'replicate';
 import { z } from 'zod';
 
@@ -64,7 +64,7 @@ const openRouter = new OpenAI({
   },
 });
 
-const runway = new RunwayML({ apiKey: process.env.RUNWAYML_API_SECRET });
+
 
 /* ──── Runtime type validation with Zod ───── */
 const Angle = z.object({
@@ -83,25 +83,64 @@ async function downloadImageAsBuffer(url) {
   return Buffer.from(data);
 }
 
-/* ──────────────────────────── Runway: animate image ── */
+/* ──────────────────────────── Replicate: animate image ── */
 async function animateImage(imageBase64) {
-  const task = await runway.imageToVideo.create({
-    model: 'gen4_turbo',
-    promptImage: `data:image/png;base64,${imageBase64}`,
-    promptText:
-      'KEEP ALL TEXT AND LOGOS COMPLETELY STATIC, 0% DISTORTION. Add lifelike and cinematic animation to the primary background elements including any sky, clouds, water. looping video starts and ends on same frame.',
-    ratio: '1280:720',
-    duration: 5,
+  const replicateApiToken = process.env.REPLICATE_API_TOKEN;
+  if (!replicateApiToken) {
+    throw new Error('REPLICATE_API_TOKEN not set');
+  }
+
+  const response = await fetch('https://api.replicate.com/v1/predictions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Token ${replicateApiToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      // bytedance/seedance-1-pro
+      version: '09f03e23714b4735a44184a434113f8e5052a8a17a0d37500170068427c3275b',
+      input: {
+        input_image:     `data:image/png;base64,${imageBase64}`,
+        motion_prompt:   'Animate the background in a realistic way, keeping the text exactly the same.',
+        width:           1920,
+        height:          1080,
+        duration:        5,
+      },
+    }),
   });
 
-  let status;
-  do {
-    await new Promise((r) => setTimeout(r, 10_000));
-    status = await runway.tasks.retrieve(task.id);
-  } while (!['SUCCEEDED', 'FAILED'].includes(status.status));
+  if (!response.ok) {
+    const error = await response.json();
+    console.error('Replicate API error:', error.detail);
+    throw new Error(`Replicate API Error: ${error.detail}`);
+  }
 
-  if (status.status === 'FAILED') throw new Error('Runway task failed');
-  return status.output[0];
+  let prediction = await response.json();
+
+  while (prediction.status !== 'succeeded' && prediction.status !== 'failed') {
+    await new Promise((r) => setTimeout(r, 5000)); // Poll every 5s
+    const getResponse = await fetch(prediction.urls.get, {
+      headers: {
+        Authorization: `Token ${replicateApiToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!getResponse.ok) {
+      // Handle non-2xx responses from the GET endpoint
+      console.error(`Failed to poll Replicate prediction: ${getResponse.status}`);
+      await new Promise((r) => setTimeout(r, 5000)); // Wait before retrying
+      continue;
+    }
+    prediction = await getResponse.json();
+  }
+
+  if (prediction.status === 'failed') {
+    console.error('Replicate prediction failed:', prediction.error);
+    throw new Error(`Replicate prediction failed: ${prediction.error}`);
+  }
+
+  // The output is a URL to the generated video
+  return prediction.output;
 }
 
 /* ──────────────────────────── Ideogram: typography ── */
