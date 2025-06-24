@@ -88,20 +88,34 @@ async function downloadImageAsBuffer(url) {
 /* ──────────────────────────── Replicate: animate image ── */
 async function animateImage(imageBase64) {
   try {
-    const output = await replicate.run(
-      'bytedance/seedance-1-pro',
-      {
-        input: {
-          input_image:     `data:image/png;base64,${imageBase64}`,
-          motion_prompt:   'Animate the background in a realistic way, keeping the text exactly the same.',
-          width:           1920,
-          height:          1080,
-          duration:        5,
-        },
-      }
-    );
-    // The output is a URL to the generated video
-    return output;
+    // Create a prediction and wait for it to complete
+    const prediction = await replicate.predictions.create({
+      model: 'bytedance/seedance-1-pro',
+      input: {
+        image:        `data:image/png;base64,${imageBase64}`,
+        prompt:       'Animate the background in a realistic way, keeping the text exactly the same.',
+        resolution:   '1080p',
+        duration:     5,
+        camera_fixed: true,
+      },
+    });
+
+    // The `wait` method polls for the prediction to finish
+    const completedPrediction = await replicate.wait(prediction);
+
+    // Check if the prediction was successful
+    if (completedPrediction.status === 'succeeded') {
+      return completedPrediction.output;
+    }
+
+    // Handle failed or canceled predictions
+    if (completedPrediction.status === 'failed' || completedPrediction.status === 'canceled') {
+      console.error('Replicate prediction failed:', completedPrediction.error);
+      throw new Error(`Replicate prediction failed: ${completedPrediction.error}`);
+    }
+
+    // Fallback for unexpected status
+    throw new Error(`Replicate prediction ended with status: ${completedPrediction.status}`);
   } catch (error) {
     console.error('Replicate API error in animateImage:', error);
     throw new Error(`Replicate API Error: ${error.message}`);
