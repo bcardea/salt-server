@@ -86,14 +86,14 @@ async function downloadImageAsBuffer(url) {
 }
 
 /* ──────────────────────────── Replicate: animate image ── */
-async function animateImage(imageBase64) {
+async function animateImage(imageBase64, prompt = 'Animate the background in a realistic way, keeping the text exactly the same.') {
   try {
     // 1. Create the prediction
     const prediction = await replicate.predictions.create({
       model: 'bytedance/seedance-1-pro',
       input: {
         image: `data:image/png;base64,${imageBase64}`,
-        prompt: 'Animate the background in a realistic way, keeping the text exactly the same.',
+        prompt,
         resolution: '1080p',
         duration: 5,
         camera_fixed: true,
@@ -610,8 +610,26 @@ app.post('/api/photographer', async (req, res) => {
       // If it's a direct string, this will also work: result.output[0] for a string 'http...' is 'h'.
       // It's safer to check if result.output is an array.
       const imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
-      if (typeof imageUrl === 'string'){
+      if (typeof imageUrl === 'string') {
         console.log('Successfully generated photographer image URL:', imageUrl);
+        const { animate } = req.body;
+
+        if (animate) {
+          console.log('Animation requested for photographer image.');
+          try {
+            const imageBuffer = await downloadImageAsBuffer(imageUrl);
+            const imageBase64 = imageBuffer.toString('base64');
+            const videoUrl = await animateImage(imageBase64, 'Animate this photo in a realistic way.');
+            return res.json({ videoUrl });
+          } catch (animationError) {
+            console.error('Error during optional animation:', animationError);
+            return res.status(500).json({
+              error: 'Image generated, but animation failed.',
+              imageUrl,
+              animationError: animationError.message,
+            });
+          }
+        }
         return res.json({ imageUrl });
       }
     }
