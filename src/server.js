@@ -102,15 +102,8 @@ async function animateImage(imageBase64, prompt = 'Animate the background in a r
 
     console.log(`Replicate prediction created: ${prediction.id}. Status page: ${prediction.urls.get}`);
 
-    // 2. Wait for the prediction with a timeout
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Replicate prediction timed out after 4 minutes.')), 240000) // 4 minutes
-    );
-
-    const completedPrediction = await Promise.race([
-      replicate.wait(prediction),
-      timeoutPromise
-    ]);
+    // 2. Wait for the prediction to finish
+    const completedPrediction = await replicate.wait(prediction);
 
     // 3. Handle the result
     if (completedPrediction.status === 'succeeded') {
