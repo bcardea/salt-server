@@ -610,26 +610,8 @@ app.post('/api/photographer', async (req, res) => {
       // If it's a direct string, this will also work: result.output[0] for a string 'http...' is 'h'.
       // It's safer to check if result.output is an array.
       const imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
-      if (typeof imageUrl === 'string') {
+      if (typeof imageUrl === 'string'){
         console.log('Successfully generated photographer image URL:', imageUrl);
-        const { animate } = req.body;
-
-        if (animate) {
-          console.log('Animation requested for photographer image.');
-          try {
-            const imageBuffer = await downloadImageAsBuffer(imageUrl);
-            const imageBase64 = imageBuffer.toString('base64');
-            const videoUrl = await animateImage(imageBase64, 'Animate this photo in a realistic way.');
-            return res.json({ videoUrl });
-          } catch (animationError) {
-            console.error('Error during optional animation:', animationError);
-            return res.status(500).json({
-              error: 'Image generated, but animation failed.',
-              imageUrl,
-              animationError: animationError.message,
-            });
-          }
-        }
         return res.json({ imageUrl });
       }
     }
@@ -853,12 +835,19 @@ app.get('/health', (req, res) => {
 // Endpoint to animate an image
 app.post('/api/animate', async (req, res) => {
   try {
-    const { imageBase64 } = req.body;
-    if (!imageBase64) {
-      return res.status(400).json({ error: 'Missing image data' });
+    const { imageBase64, imageUrl, prompt } = req.body;
+    let finalBase64;
+
+    if (imageUrl) {
+      const imageBuffer = await downloadImageAsBuffer(imageUrl);
+      finalBase64 = imageBuffer.toString('base64');
+    } else if (imageBase64) {
+      finalBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+    } else {
+      return res.status(400).json({ error: 'Missing image data: please provide either imageUrl or imageBase64.' });
     }
-    const cleanBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, '');
-    const videoUrl = await animateImage(cleanBase64);
+
+    const videoUrl = await animateImage(finalBase64, prompt);
     res.json({ videoUrl });
   } catch (error) {
     console.error('Error in /api/animate:', error);
