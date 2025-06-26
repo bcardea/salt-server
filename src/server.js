@@ -331,7 +331,7 @@ function cleanJsonString(str) {
 
 async function callForAngles(prompt) {
   const completion = await openRouter.chat.completions.create({
-    model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+    model: 'deepseek/deepseek-r1-0528',
     messages: [
       {
         role: 'system',
@@ -355,7 +355,7 @@ async function generateSermonOutline(
   chosenAngleTitle, // ← now a string, not an object
 ) {
   const res = await openRouter.chat.completions.create({
-    model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+    model: 'deepseek/deepseek-r1-0528',
     temperature: 0.6,
     messages: [
       {
@@ -530,7 +530,7 @@ async function generateCommunicationDraft(type, topic, keyPoints, tone, audience
   try {
     const keyPointsString = Array.isArray(keyPoints) ? keyPoints.join(', ') : keyPoints;
     const prompt = `
-Generate a communication draft for the following requirements:
+You are an expert copywriter for Church and Ministry outreach. You have 20 years of experience in writing for churches and ministries, you know how to craft excellent copy for churches and ministries based on the target market. Generate a communication draft for the following requirements:
 
 Communication Type: ${type}
 Topic: "${topic}"
@@ -542,7 +542,7 @@ Please craft the content tailored to these specifications. Ensure the output is 
 Use Markdown for formatting if appropriate for the type (e.g., for emails or event descriptions). For social media posts, keep it concise.
 `;
     const completion = await openRouter.chat.completions.create({
-      model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+      model: 'deepseek/deepseek-r1-0528',
       messages: [
         { role: 'system', content: 'You are an expert communications assistant. Generate tailored content based on the provided specifications. Return your answer in **Markdown**, US English only, no other alphabets.' },
         { role: 'user', content: prompt }
