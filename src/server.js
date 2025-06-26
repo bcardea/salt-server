@@ -478,22 +478,46 @@ async function generateImageFromPrompt(prompt) {
 /* ───────────────── Research + Comms helpers (unchanged) ── */
 async function generateResearchAnalysis(topic) {
   try {
-    const prompt = `
-You are a doctorate level research analysist who works specifically for pastors and churches, Provide a comprehensive research analysis on the topic: "${topic}".
-Structure your response with the following sections:
-1.  **Overview**: A brief introduction to the topic.
-2.  **Key Sub-topics/Themes**: Identify and elaborate on 3-5 major sub-topics or themes related to the main topic.
-3.  **Illustrative Examples or Case Studies**: Provide 1-2 relevant examples or case studies that help illustrate the concepts.
-4.  **Potential Resources for Further Reading**: Suggest 2-3 credible sources (articles, books, websites) for deeper exploration.
-5.  **Smart Summary/Key Takeaways**: Conclude with a concise summary of the most important points.
+    const systemPrompt = 'You are a doctorate-level biblical research analyst writing for pastors and church leaders.';
+    const userPrompt = `**Task**
+Provide a comprehensive research analysis on the topic: **“${topic}.”**
 
-Format your output clearly using Markdown.
-`;
+---
+
+### Structure (Markdown headings only)
+
+1.  **Overview** – 150-200-word introduction.  
+2.  **Key Sub-topics / Themes** – 3-5 subsections unpacking the most important historical, theological, and cultural facets.  
+3.  **Illustrative Examples or Case Studies** – 1-2 concise examples that illuminate the concepts.  
+4.  **Potential Resources for Further Reading** – exactly 3 carefully curated sources.  
+5.  **Smart Summary / Key Takeaways** – bullet-point recap **plus** a “Pastoral Application” block (3-4 sermon-ready bullets).
+
+---
+
+### Content & Accuracy
+
+- Anchor every point in **biblically orthodox, broadly accepted Christian scholarship** trusted by the modern American church (e.g., authority of Scripture, historic creeds).  
+- Verify all historical details. Use parenthetical inline references—e.g., *(Deut 21:17)*; Bailey, *Poet and Peasant* (Eerdmans, 1983).  
+- No speculative or fringe interpretations.
+
+### Resource List Requirements
+
+- Cite only pastor-trusted sources: mainstream evangelical or mainline commentaries (NICNT, WBC, Pillar), standard biblical dictionaries, respected scholars such as Kenneth E. Bailey, Craig Blomberg, Klyne Snodgrass.  
+- Format each source as:  
+  - Author, *Title* (Publisher, Year)
+
+### Style & Formatting
+
+- Write in clear, engaging prose suitable for a 60-year-old pastor: scholarly rigor without academic clutter.  
+- Paragraphs ≤ 4 sentences; bullet lists welcome.  
+- Target length ≈ 1,200 words unless instructed otherwise.  
+- **Return only the five requested sections—no footnotes, meta-comments, or extra content.**`;
+
     const completion = await openRouter.chat.completions.create({
-      model: 'deepseek/deepseek-r1-0528-qwen3-8b:free',
+      model: 'deepseek/deepseek-r1-0528',
       messages: [
-        { role: 'system', content: 'You are a helpful research assistant. Provide detailed and structured analysis. Return your answer in **Markdown**, US English only, no other alphabets.' },
-        { role: 'user', content: prompt }
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
     });
     return completion.choices[0].message.content;
