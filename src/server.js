@@ -557,6 +557,87 @@ Use Markdown for formatting if appropriate for the type (e.g., for emails or eve
 
 /* ───────────────────────────── Routes ── */
 
+app.post('/api/edit-image', async (req, res) => {
+  try {
+    const { prompt, input_image } = req.body;
+
+    if (!prompt || !input_image) {
+      return res.status(400).json({ error: 'Missing prompt or input_image' });
+    }
+
+    console.log('Starting image edit with Replicate...');
+
+    const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        version: 'black-forest-labs/flux-kontext-dev',
+        input: {
+          prompt,
+          input_image,
+          aspect_ratio: 'match_input_image',
+          output_format: 'png',
+        },
+      }),
+    });
+
+    let prediction = await createResponse.json();
+    console.log('Image edit initial prediction:', JSON.stringify(prediction, null, 2));
+
+    if (!createResponse.ok || prediction.error) {
+      const errorDetail = prediction.error ? JSON.stringify(prediction.error) : `HTTP status ${createResponse.status}`;
+      console.error(`Image edit prediction creation failed: ${errorDetail}`);
+      return res.status(500).json({ error: `Prediction creation failed: ${errorDetail}` });
+    }
+
+    // Poll for completion
+    let result = prediction;
+    const maxPolls = 60; // Poll for a maximum of 60 seconds
+    let pollCount = 0;
+
+    while ((result.status === 'starting' || result.status === 'processing') && pollCount < maxPolls) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+
+      const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${prediction.id}`, {
+        headers: {
+          'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
+        },
+      });
+
+      if (!pollResponse.ok) {
+        console.error(`Image edit polling failed: HTTP status ${pollResponse.status}`);
+        return res.status(500).json({ error: `Polling failed: HTTP status ${pollResponse.status}` });
+      }
+
+      result = await pollResponse.json();
+      console.log('Image edit poll result status:', result.status);
+      pollCount++;
+    }
+
+    console.log('Image edit final prediction result:', JSON.stringify(result, null, 2));
+
+    if (result.status === 'succeeded' && result.output) {
+      const imageUrl = Array.isArray(result.output) ? result.output[0] : result.output;
+      if (typeof imageUrl === 'string') {
+        console.log('Successfully edited image URL:', imageUrl);
+        return res.json({ imageUrl });
+      }
+    }
+
+    const failureReason = result.error ? JSON.stringify(result.error) : `Status: ${result.status}`;
+    console.error(`Image edit failed: ${failureReason}`);
+    res.status(500).json({ error: `Image edit failed: ${failureReason}` });
+
+  } catch (error) {
+    console.error('Error in /api/edit-image:', error.message);
+    console.error('Full error stack:', error.stack);
+    res.status(500).json({ error: `Failed to edit image: ${error.message}` });
+  }
+});
+
 app.post('/api/photographer', async (req, res) => {
   try {
     const { photo_input } = req.body;
