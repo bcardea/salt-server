@@ -152,6 +152,23 @@ async function generateTypography(headline, subHeadline, style) {
   return data.data;
 }
 
+app.post('/api/generate-typography', async (req, res) => {
+  try {
+    const { headline, subHeadline, style } = req.body;
+
+    if (!headline || !subHeadline) {
+      return res.status(400).json({ error: 'Missing headline or subHeadline in request body' });
+    }
+
+    // The 'style' parameter is optional and defaults to 'focused' inside the function
+    const typographyData = await generateTypography(headline, subHeadline, style);
+    res.json(typographyData);
+  } catch (error) {
+    console.error('Error in /api/generate-typography:', error);
+    res.status(500).json({ error: `Failed to generate typography: ${error.message}` });
+  }
+});
+
 /* ───────────────────────── OpenAI: final poster images ── */
 // Generate final image with OpenAI Image Edit API
 async function generateFinalImage(typographyUrl, imageDescription) {
