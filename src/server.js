@@ -569,7 +569,7 @@ async function removeBackground(imageBase64) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-                version: '851-labs/background-remover',
+                        version: 'lucataco/remove-bg:95fcc2a2',
         input: { image: `data:image/png;base64,${imageBase64}` },
       }),
     });
