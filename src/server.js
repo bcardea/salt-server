@@ -64,7 +64,9 @@ const openRouter = new OpenAI({
   },
 });
 
-const replicate = new Replicate();
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN || process.env.REPLICATE_API_KEY,
+});
 
 
 
@@ -555,7 +557,66 @@ Use Markdown for formatting if appropriate for the type (e.g., for emails or eve
   }
 }
 
+/* ──────────────────────────── Replicate: remove background ── */
+async function removeBackground(imageBase64) {
+  try {
+    // 1. Create the prediction
+    const prediction = await replicate.predictions.create({
+      // Use the correct model format: owner/name:version
+      version: "95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
+      input: {
+        image: `data:image/png;base64,${imageBase64}`,
+      },
+    });
+
+    console.log(`Replicate prediction created: ${prediction.id}. Status page: ${prediction.urls.get}`);
+
+    // 2. Wait for the prediction to finish
+    const completedPrediction = await replicate.wait(prediction);
+
+    // 3. Handle the result
+    if (completedPrediction.status === 'succeeded') {
+      console.log('Background removal succeeded. Output URL:', completedPrediction.output);
+      return completedPrediction.output;
+    }
+
+    if (completedPrediction.status === 'failed' || completedPrediction.status === 'canceled') {
+      console.error('Background removal failed:', completedPrediction.error);
+      throw new Error(`Background removal failed: ${completedPrediction.error}`);
+    }
+
+    throw new Error(`Background removal ended with unexpected status: ${completedPrediction.status}`);
+  } catch (error) {
+    console.error('Replicate API error in removeBackground:', error);
+    throw new Error(`Replicate API Error: ${error.message}`);
+  }
+}
+
 /* ───────────────────────────── Routes ── */
+
+app.post('/api/remove-background', async (req, res) => {
+  try {
+    const { image } = req.body;
+    
+    if (!image) {
+      return res.status(400).json({ error: 'Missing image data' });
+    }
+    
+    // Extract base64 data from data URL if needed
+    const base64Data = image.startsWith('data:') 
+      ? image.split(',')[1] 
+      : image;
+    
+    // Call the removeBackground function
+    const resultUrl = await removeBackground(base64Data);
+    
+    // Return the URL of the processed image
+    return res.json({ url: resultUrl });
+  } catch (error) {
+    console.error('Error in /api/remove-background:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
 
 app.post('/api/edit-image', async (req, res) => {
   try {
