@@ -559,34 +559,64 @@ Use Markdown for formatting if appropriate for the type (e.g., for emails or eve
 
 /* ──────────────────────────── Replicate: remove background ── */
 async function removeBackground(imageBase64) {
+  console.log('Starting background removal with Replicate (fetch)...');
   try {
     // 1. Create the prediction
-    const prediction = await replicate.predictions.create({
-                  model: '851-labs/background-remover:a029dff3',
-      input: {
-        image: `data:image/png;base64,${imageBase64}`,
+    const createResponse = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        version: '851-labs/background-remover:a029dff3',
+        input: { image: `data:image/png;base64,${imageBase64}` },
+      }),
     });
 
-    console.log(`Replicate prediction created: ${prediction.id}. Status page: ${prediction.urls.get}`);
+    let prediction = await createResponse.json();
+    if (!createResponse.ok || prediction.error) {
+      const errorDetail = prediction.error ? JSON.stringify(prediction.error) : `HTTP status ${createResponse.status}`;
+      console.error(`Background removal prediction failed: ${errorDetail}`);
+      throw new Error(`Prediction creation failed: ${errorDetail}`);
+    }
 
-    // 2. Wait for the prediction to finish
-    const completedPrediction = await replicate.wait(prediction);
+    console.log(`Prediction ${prediction.id} created. Polling for result...`);
+
+    // 2. Poll for completion
+    let result = prediction;
+    const maxPolls = 60; // Poll for a maximum of 60 seconds
+    let pollCount = 0;
+
+    while ((result.status === 'starting' || result.status === 'processing') && pollCount < maxPolls) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+
+      const pollResponse = await fetch(prediction.urls.get, { // Use the URL from the prediction response
+        headers: {
+          'Authorization': `Token ${process.env.REPLICATE_API_TOKEN}`,
+        },
+      });
+
+      if (!pollResponse.ok) {
+        throw new Error(`Polling failed: HTTP status ${pollResponse.status}`);
+      }
+
+      result = await pollResponse.json();
+      console.log('Poll status:', result.status);
+      pollCount++;
+    }
 
     // 3. Handle the result
-    if (completedPrediction.status === 'succeeded') {
-      console.log('Background removal succeeded. Output URL:', completedPrediction.output);
-      return completedPrediction.output;
+    if (result.status === 'succeeded' && typeof result.output === 'string') {
+      console.log('Background removal succeeded. Output URL:', result.output);
+      return result.output;
     }
 
-    if (completedPrediction.status === 'failed' || completedPrediction.status === 'canceled') {
-      console.error('Background removal failed:', completedPrediction.error);
-      throw new Error(`Background removal failed: ${completedPrediction.error}`);
-    }
+    const failureReason = result.error ? JSON.stringify(result.error) : `Final status: ${result.status}`;
+    throw new Error(`Background removal failed: ${failureReason}`);
 
-    throw new Error(`Background removal ended with unexpected status: ${completedPrediction.status}`);
   } catch (error) {
-    console.error('Replicate API error in removeBackground:', error);
+    console.error('Error in removeBackground function:', error.message);
     throw new Error(`Replicate API Error: ${error.message}`);
   }
 }
