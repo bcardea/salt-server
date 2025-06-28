@@ -25,7 +25,7 @@ const allowedOrigins = [
   'https://incredible-figolla-a49ac9.netlify.app',
   'https://6851d32411955d00085ca882--incredible-figolla-a49ac9.netlify.app',
   'https://68544903b30e310008605970--incredible-figolla-a49ac9.netlify.app',
-  'https://68603dafbebf7d00087377a0--incredible-figolla-a49ac9.netlify.app',
+  'https://6860457018c0d000081c0a14--incredible-figolla-a49ac9.netlify.app',
 ];
 
 // extra origins when developing locally
