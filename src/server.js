@@ -562,7 +562,7 @@ async function removeBackground(imageBase64) {
   try {
     // 1. Create the prediction
     const prediction = await replicate.predictions.create({
-            model: '851-labs/background-remover:a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4946a41055d7db66b80bc',
+                  model: '851-labs/background-remover:a029dff3',
       input: {
         image: `data:image/png;base64,${imageBase64}`,
       },
