@@ -558,7 +558,7 @@ Use Markdown for formatting if appropriate for the type (e.g., for emails or eve
 }
 
 /* ──────────────────────────── Replicate: remove background ── */
-async function removeBackground(imageBase64) {
+async function removeBackground(imageUrl) {
   console.log('Starting background removal with Replicate (fetch)...');
   try {
     // 1. Create the prediction
@@ -569,8 +569,8 @@ async function removeBackground(imageBase64) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-                        version: 'lucataco/remove-bg:95fcc2a2',
-        input: { image: `data:image/png;base64,${imageBase64}` },
+        version: 'lucataco/remove-bg:95fcc2a2',
+        input: { image: imageUrl },
       }),
     });
 
@@ -625,12 +625,12 @@ async function removeBackground(imageBase64) {
 
 app.post('/api/remove-background', async (req, res) => {
   try {
-    const { image_base64 } = req.body;
-    if (!image_base64) {
-      return res.status(400).json({ error: 'Missing image_base64 in request body' });
+    const { imageUrl } = req.body;
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'Missing imageUrl in request body' });
     }
 
-    const outputUrl = await removeBackground(image_base64);
+    const outputUrl = await removeBackground(imageUrl);
     res.json({ imageUrl: outputUrl });
   } catch (error) {
     console.error('Error in /api/remove-background:', error);
