@@ -562,8 +562,7 @@ async function removeBackground(imageBase64) {
   try {
     // 1. Create the prediction
     const prediction = await replicate.predictions.create({
-      // Use the correct model format: owner/name:version
-      version: "95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1",
+      model: 'lucataco/remove-bg:95fcc2a26d3899cd6c2691c900465aaeff466285a65c14638cc5f36f34befaf1',
       input: {
         image: `data:image/png;base64,${imageBase64}`,
       },
@@ -596,25 +595,16 @@ async function removeBackground(imageBase64) {
 
 app.post('/api/remove-background', async (req, res) => {
   try {
-    const { image } = req.body;
-    
-    if (!image) {
-      return res.status(400).json({ error: 'Missing image data' });
+    const { image_base64 } = req.body;
+    if (!image_base64) {
+      return res.status(400).json({ error: 'Missing image_base64 in request body' });
     }
-    
-    // Extract base64 data from data URL if needed
-    const base64Data = image.startsWith('data:') 
-      ? image.split(',')[1] 
-      : image;
-    
-    // Call the removeBackground function
-    const resultUrl = await removeBackground(base64Data);
-    
-    // Return the URL of the processed image
-    return res.json({ url: resultUrl });
+
+    const outputUrl = await removeBackground(image_base64);
+    res.json({ imageUrl: outputUrl });
   } catch (error) {
     console.error('Error in /api/remove-background:', error);
-    return res.status(500).json({ error: error.message });
+    res.status(500).json({ error: `Failed to remove background: ${error.message}` });
   }
 });
 
