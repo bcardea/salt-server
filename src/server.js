@@ -574,6 +574,53 @@ Use Markdown for formatting if appropriate for the type (e.g., for emails or eve
   }
 }
 
+/* ──────────────────────────── Cutout.Pro: remove background from text ── */
+async function removeBackgroundFromText(imageUrl) {
+  console.log('Starting text background removal with Cutout.Pro...');
+  try {
+    const response = await axios.get('https://www.cutout.pro/api/v1/mattingByUrl',
+      {
+        params: {
+          url: imageUrl,
+          mattingType: 6, // General purpose background removal
+        },
+        headers: {
+          'APIKEY': process.env.CUTOUT_PRO_API_KEY,
+        },
+      });
+
+    if (response.data && response.data.code === 0) {
+      console.log('Cutout.Pro background removal succeeded.');
+      return response.data.data.imageBase64;
+    }
+    // Handle API-specific errors
+    const errorMessage = response.data.msg || 'Unknown error from Cutout.Pro API';
+    console.error(`Cutout.Pro API error: ${errorMessage}`);
+    throw new Error(`Cutout.Pro API Error: ${errorMessage}`);
+
+  } catch (error) {
+    // Handle network or other axios errors
+    const message = error.response ? error.response.data.msg : error.message;
+    console.error('Error in removeBackgroundFromText function:', message);
+    throw new Error(message);
+  }
+}
+
+app.post('/api/remove-background-text', async (req, res) => {
+  try {
+    const { imageUrl } = req.body;
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'Missing imageUrl in request body' });
+    }
+
+    const base64Image = await removeBackgroundFromText(imageUrl);
+    res.json({ imageBase64: base64Image });
+  } catch (error) {
+    console.error('Error in /api/remove-background-text:', error);
+    res.status(500).json({ error: `Failed to remove text background: ${error.message}` });
+  }
+});
+
 /* ──────────────────────────── Replicate: remove background ── */
 async function removeBackground(imageUrl) {
   console.log('Starting background removal with Replicate (fetch)...');
